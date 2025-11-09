@@ -66,30 +66,41 @@ python install.py
 
 ### Node 2: Multi Image Uploader 🖼️
 
-**Function**: Load multiple images from ComfyUI's input folder
+**Function**: Connect multiple Load Image nodes and merge into batch
 
 **Inputs**:
-- `image_pattern` (STRING): File matching pattern (e.g., `*.jpg` or `photo_*.png`)
-- `start_index` (INT): Starting index (default: 0)
-- `max_images` (INT): Maximum number to load (default: 10)
+- `image_1` (IMAGE): First image (required)
+- `image_2` (IMAGE, optional): Second image
+- `image_3` (IMAGE, optional): Third image
+- ... up to 10 images
 
 **Outputs**:
-- `images` (IMAGE): Image batch
+- `images` (IMAGE): Merged image batch
 
 **How to use**:
-1. Upload images to ComfyUI's `input` folder
-2. Set file pattern (e.g., `*.jpg` for all JPG files)
-3. Set start index and max count
-4. Load selected images
+```
+[Load Image] → image_1
+[Load Image] → image_2
+[Load Image] → image_3
+     ↓ ↓ ↓
+[MultiImageUploader] → auto merge
+     ↓ images
+```
+
+**Features**:
+- 📷 **Flexible**: Connect as many Load Image nodes as needed
+- 🎯 **Visual**: See each image clearly in workflow
+- ✨ **Auto-merge**: Automatically merge all connected images
+- 🔢 **1-10 images**: First is required, others optional
 
 **Use cases**:
 - Manually pick specific images
-- Flexible control over which images to load
-- No grouping (all images as one set)
+- Visual control over each image
+- Suitable for small batches (≤10 images)
 
 **Difference from BatchImageLoader**:
-- BatchImageLoader: Automated, folder path, auto-grouping
-- MultiImageUploader: Manual, input folder, pattern matching
+- BatchImageLoader: Folder path, auto-grouping, large batches
+- MultiImageUploader: Manual connection, visual, small batches
 
 ---
 
@@ -118,21 +129,26 @@ python install.py
 
 **Inputs**:
 - `image` (IMAGE): Input image(s)
-- `classifications` (STRING): From ImageClassifier
-- `日常plog_单图_pe` (STRING): PE for single daily plog image
-- `日常plog_多图_pe` (STRING): PE for multiple daily plog images
-- `人像自拍_单图_pe` (STRING): PE for single portrait image
-- `人像自拍_多图_pe` (STRING): PE for multiple portrait images
-- `抽象文案_单图_pe` (STRING): PE for single abstract caption
-- `抽象文案_多图_pe` (STRING): PE for multiple abstract captions
-- `图片详细描述_单图_pe` (STRING): PE for single detailed description
-- `图片详细描述_多图_pe` (STRING): PE for multiple detailed descriptions
-- `其他_单图_pe` (STRING): PE for single other category
-- `其他_多图_pe` (STRING): PE for multiple other category
+- `classifications` (STRING): From ImageClassifier (must connect)
+- `日常plog_单图_pe` (STRING): PE for single daily plog (must connect)
+- `日常plog_多图_pe` (STRING): PE for multiple daily plog (must connect)
+- `人像自拍_单图_pe` (STRING): PE for single portrait (must connect)
+- `人像自拍_多图_pe` (STRING): PE for multiple portrait (must connect)
+- `抽象文案_单图_pe` (STRING): PE for single abstract (must connect)
+- `抽象文案_多图_pe` (STRING): PE for multiple abstract (must connect)
+- `图片详细描述_单图_pe` (STRING): PE for single description (must connect)
+- `图片详细描述_多图_pe` (STRING): PE for multiple description (must connect)
+- `其他_单图_pe` (STRING): PE for single other (must connect)
+- `其他_多图_pe` (STRING): PE for multiple other (must connect)
 - `api_key` (STRING): Doubao API key
 - `api_url` (STRING): API endpoint
 - `model` (STRING): Model name
 - `text_requirement` (STRING, optional): Additional requirement
+
+**PE Input Note**:
+- All PE parameters must be connected from other nodes (e.g., Text nodes)
+- Use ComfyUI's "Text" or "String Constant" nodes
+- Refer to `config/default_captions.json` for default PE templates
 
 **Auto PE Selection**:
 - Tag contains `_multi_pic` → Use multi-image PE

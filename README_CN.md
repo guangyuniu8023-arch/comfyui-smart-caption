@@ -97,30 +97,41 @@ python install.py
 
 ### 节点2：多图上传器 🖼️ (MultiImageUploader)
 
-**功能**：从ComfyUI的input文件夹手动选择多张图片上传
+**功能**：连接多个Load Image节点，自动合并成batch
 
 **输入参数**：
-- `image_pattern` (STRING)：文件匹配模式（如 `*.jpg` 或 `photo_*.png`）
-- `start_index` (INT)：起始索引（默认0）
-- `max_images` (INT)：最大加载数量（默认10）
+- `image_1` (IMAGE)：第1张图片（必需）
+- `image_2` (IMAGE, 可选)：第2张图片
+- `image_3` (IMAGE, 可选)：第3张图片
+- ... 最多支持10张图片
 
 **输出**：
-- `images` (IMAGE)：图片batch
+- `images` (IMAGE)：合并后的图片batch
 
 **使用方法**：
-1. 先把图片上传到ComfyUI的 `input` 文件夹
-2. 在节点中设置匹配模式（如 `*.jpg` 匹配所有jpg图片）
-3. 设置起始索引和数量
-4. 加载选中的图片
+```
+[Load Image] → image_1
+[Load Image] → image_2
+[Load Image] → image_3
+     ↓ ↓ ↓
+[MultiImageUploader] → 自动合并成batch
+     ↓ images
+```
+
+**特点**：
+- 📷 **灵活选择**：想上传几张就连接几个Load Image
+- 🎯 **可视化**：在工作流中清晰看到每张图片
+- ✨ **自动合并**：自动将所有连接的图片合并成batch
+- 🔢 **支持1-10张**：第1张必需，其他9张可选
 
 **使用场景**：
-- 手动挑选几张图片进行处理
-- 灵活控制加载哪些图片
-- 不需要分组功能（所有图片作为一组）
+- 手动挑选几张特定图片
+- 可视化控制每张图片
+- 适合小批量处理（≤10张）
 
 **与BatchImageLoader的区别**：
-- BatchImageLoader：自动化，文件夹路径，自动分组
-- MultiImageUploader：手动化，input文件夹，文件模式匹配
+- BatchImageLoader：文件夹路径，自动分组，适合大批量
+- MultiImageUploader：手动连接，可视化，适合小批量
 
 ---
 
@@ -164,21 +175,26 @@ python install.py
 
 **输入参数**：
 - `image` (IMAGE)：输入图片
-- `classifications` (STRING)：分类结果（从ImageClassifier）
-- `日常plog_单图_pe` (STRING)：日常plog单图配文PE
-- `日常plog_多图_pe` (STRING)：日常plog多图配文PE
-- `人像自拍_单图_pe` (STRING)：人像自拍单图配文PE
-- `人像自拍_多图_pe` (STRING)：人像自拍多图配文PE
-- `抽象文案_单图_pe` (STRING)：抽象文案单图配文PE
-- `抽象文案_多图_pe` (STRING)：抽象文案多图配文PE
-- `图片详细描述_单图_pe` (STRING)：图片详细描述单图配文PE
-- `图片详细描述_多图_pe` (STRING)：图片详细描述多图配文PE
-- `其他_单图_pe` (STRING)：其他单图配文PE
-- `其他_多图_pe` (STRING)：其他多图配文PE
+- `classifications` (STRING)：分类结果（从ImageClassifier连接）
+- `日常plog_单图_pe` (STRING)：日常plog单图配文PE（必须连接输入）
+- `日常plog_多图_pe` (STRING)：日常plog多图配文PE（必须连接输入）
+- `人像自拍_单图_pe` (STRING)：人像自拍单图配文PE（必须连接输入）
+- `人像自拍_多图_pe` (STRING)：人像自拍多图配文PE（必须连接输入）
+- `抽象文案_单图_pe` (STRING)：抽象文案单图配文PE（必须连接输入）
+- `抽象文案_多图_pe` (STRING)：抽象文案多图配文PE（必须连接输入）
+- `图片详细描述_单图_pe` (STRING)：图片详细描述单图配文PE（必须连接输入）
+- `图片详细描述_多图_pe` (STRING)：图片详细描述多图配文PE（必须连接输入）
+- `其他_单图_pe` (STRING)：其他单图配文PE（必须连接输入）
+- `其他_多图_pe` (STRING)：其他多图配文PE（必须连接输入）
 - `api_key` (STRING)：Doubao API密钥
 - `api_url` (STRING)：API地址
 - `model` (STRING)：模型名称
 - `text_requirement` (STRING, 可选)：额外的文本需求
+
+**PE输入说明**：
+- 所有PE参数都必须从其他节点连接输入（如Text节点）
+- 可以使用ComfyUI的 "Text" 节点或 "String Constant" 节点
+- 在 `config/default_captions.json` 中有默认PE模板可参考
 
 **自动PE选择**：
 - 标签包含 `_multi_pic` → 自动使用多图PE
@@ -207,19 +223,25 @@ python install.py
 [Load Image]（ComfyUI自带）
      ↓ IMAGE
 [ImageClassifier]
-  配置：
-  - classification_pe: (使用默认或自定义)
-  - api_key: your_api_key
+  配置：classification_pe（可编辑）
      ↓ classifications (STRING)
      ↓ IMAGE
-[SmartCaptionGenerator]
-  配置：
-  - 日常plog_pe: "生成轻松随性的配文"
-  - 人像自拍_pe: "生成时尚个性的配文"
+     
+[Text节点] × 10个 → 提供10个PE文本
+  - 日常plog_单图_pe: "生成轻松随性的配文..."
+  - 日常plog_多图_pe: "概括整组图片..."
+  - 人像自拍_单图_pe: "生成时尚个性的配文..."
   - ...
+     ↓ STRING × 10
+[SmartCaptionGenerator]
      ↓ captions (STRING)
 [Display Text] / [Save Text]
 ```
+
+**提示**：
+- 使用ComfyUI的 "Text" 节点或 "String Constant" 节点提供PE
+- 10个PE可以复用Text节点（如果内容相同）
+- 参考 `config/default_captions.json` 中的默认PE模板
 
 ### 工作流2：批量图片处理 - 自动分组（推荐✨）
 
@@ -259,19 +281,18 @@ python install.py
 - 图2: "人像自拍" → 使用"人像自拍_单图_pe" → "今日穿搭分享～✨"
 ```
 
-### 工作流3：手动选择多图处理
+### 工作流3：手动多图上传处理
 
 ```
-[MultiImageUploader]
-  输入：
-  - image_pattern: "vacation_*.jpg"
-  - start_index: 0
-  - max_images: 5
-  （从input文件夹加载vacation_0.jpg到vacation_4.jpg）
-     ↓ IMAGE (batch: 5张，作为一组)
+[Load Image] → image_1
+[Load Image] → image_2
+[Load Image] → image_3
+     ↓ ↓ ↓
+[MultiImageUploader] → 合并成batch
+     ↓ IMAGE (batch: 3张)
 [ImageClassifier]
   mode: multi
-  （5张图作为一个整体判断关联）
+  （3张图作为一个整体判断关联）
      ↓ classifications
      ↓ IMAGE
 [SmartCaptionGenerator]
@@ -281,7 +302,8 @@ python install.py
 
 **适用场景**：
 - 手动挑选几张特定图片
-- 不需要自动分组
+- 可视化查看每张图片
+- 小批量处理（1-10张）
 - 快速测试和调试
 
 ---

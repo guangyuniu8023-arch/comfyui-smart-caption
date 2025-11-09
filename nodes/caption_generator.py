@@ -110,54 +110,34 @@ class SmartCaptionGenerator:
                     "forceInput": True  # 必须从其他节点输入
                 }),
                 "日常plog_单图_pe": ("STRING", {
-                    "multiline": True,
-                    "default": default_pes.get("日常plog_单图", ""),
-                    "dynamicPrompts": False
+                    "forceInput": True  # 必须从其他节点输入
                 }),
                 "日常plog_多图_pe": ("STRING", {
-                    "multiline": True,
-                    "default": default_pes.get("日常plog_多图", ""),
-                    "dynamicPrompts": False
+                    "forceInput": True
                 }),
                 "人像自拍_单图_pe": ("STRING", {
-                    "multiline": True,
-                    "default": default_pes.get("人像自拍_单图", ""),
-                    "dynamicPrompts": False
+                    "forceInput": True
                 }),
                 "人像自拍_多图_pe": ("STRING", {
-                    "multiline": True,
-                    "default": default_pes.get("人像自拍_多图", ""),
-                    "dynamicPrompts": False
+                    "forceInput": True
                 }),
                 "抽象文案_单图_pe": ("STRING", {
-                    "multiline": True,
-                    "default": default_pes.get("抽象文案_单图", ""),
-                    "dynamicPrompts": False
+                    "forceInput": True
                 }),
                 "抽象文案_多图_pe": ("STRING", {
-                    "multiline": True,
-                    "default": default_pes.get("抽象文案_多图", ""),
-                    "dynamicPrompts": False
+                    "forceInput": True
                 }),
                 "图片详细描述_单图_pe": ("STRING", {
-                    "multiline": True,
-                    "default": default_pes.get("图片详细描述_单图", ""),
-                    "dynamicPrompts": False
+                    "forceInput": True
                 }),
                 "图片详细描述_多图_pe": ("STRING", {
-                    "multiline": True,
-                    "default": default_pes.get("图片详细描述_多图", ""),
-                    "dynamicPrompts": False
+                    "forceInput": True
                 }),
                 "其他_单图_pe": ("STRING", {
-                    "multiline": True,
-                    "default": default_pes.get("其他_单图", ""),
-                    "dynamicPrompts": False
+                    "forceInput": True
                 }),
                 "其他_多图_pe": ("STRING", {
-                    "multiline": True,
-                    "default": default_pes.get("其他_多图", ""),
-                    "dynamicPrompts": False
+                    "forceInput": True
                 }),
                 "api_key": ("STRING", {
                     "default": "d26ed5b5-0816-4bec-b045-c353abc16667"

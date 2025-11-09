@@ -161,3 +161,100 @@ def call_doubao_api(
     except Exception as e:
         raise RuntimeError(f"调用 Doubao API 时发生错误: {str(e)}")
 
+
+def call_doubao_api_for_caption(
+    image: Union[str, Image.Image],
+    prompt: str,
+    text_requirement: str = "",
+    api_key: str = "",
+    api_url: str = "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+    model: str = "doubao-seed-1-6-250615"
+) -> str:
+    """
+    调用 Doubao API 生成配文（返回纯文本）
+    
+    Args:
+        image: PIL Image对象或图片文件路径
+        prompt: 配文生成PE
+        text_requirement: 额外的文本需求（可选）
+        api_key: Doubao API Key
+        api_url: API URL
+        model: 模型名称
+    
+    Returns:
+        生成的配文文本
+    """
+    # 转换图片为base64
+    if isinstance(image, str):
+        image_base64 = image_path_to_base64(image)
+    elif isinstance(image, Image.Image):
+        image_base64 = pil_to_base64(image)
+    else:
+        raise ValueError(f"不支持的图片类型: {type(image)}")
+    
+    # 构造用户消息内容
+    user_content = [
+        {
+            "type": "image_url",
+            "image_url": {
+                "url": image_base64
+            }
+        }
+    ]
+    
+    # 构造文本部分
+    if text_requirement:
+        full_prompt = f"{prompt}\n\n额外要求：{text_requirement}"
+    else:
+        full_prompt = prompt
+    
+    user_content.append({
+        "type": "text",
+        "text": full_prompt
+    })
+    
+    # 构造请求
+    payload = {
+        "model": model,
+        "messages": [
+            {
+                "role": "user",
+                "content": user_content
+            }
+        ],
+        "temperature": 0,  # 完全确定性输出
+        "thinking": {
+            "type": "disabled"  # 关闭思考模式
+        }
+    }
+    
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    
+    # 发送请求
+    try:
+        response = requests.post(
+            api_url,
+            headers=headers,
+            json=payload,
+            timeout=60
+        )
+        response.raise_for_status()
+        
+        # 解析响应
+        result = response.json()
+        
+        # 提取 AI 返回的内容（纯文本）
+        if 'choices' in result and len(result['choices']) > 0:
+            content = result['choices'][0]['message']['content']
+            return content.strip()
+        else:
+            raise ValueError(f"API 返回格式错误: {result}")
+    
+    except requests.exceptions.RequestException as e:
+        raise RuntimeError(f"API 请求失败: {str(e)}")
+    except Exception as e:
+        raise RuntimeError(f"调用 Doubao API 时发生错误: {str(e)}")
+

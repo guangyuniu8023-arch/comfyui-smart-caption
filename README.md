@@ -44,7 +44,56 @@ python install.py
 
 ## 🎨 Node Description
 
-### Node 1: Image Classifier 📷
+### Node 1: Batch Image Loader 📁
+
+**Function**: Load multiple images from a folder
+
+**Inputs**:
+- `folder_path` (STRING): Folder path
+- `max_images` (INT, optional): Maximum number of images to load (default: 100)
+
+**Outputs**:
+- `images` (IMAGE): Image batch
+- `groups` (STRING): Auto-detected group information (JSON)
+
+**Auto-grouping**:
+- **With subfolders**: Each subfolder becomes a group
+- **Without subfolders**: All images as one group
+
+**Note**: For single image, use ComfyUI's built-in Load Image node
+
+---
+
+### Node 2: Multi Image Uploader 🖼️
+
+**Function**: Load multiple images from ComfyUI's input folder
+
+**Inputs**:
+- `image_pattern` (STRING): File matching pattern (e.g., `*.jpg` or `photo_*.png`)
+- `start_index` (INT): Starting index (default: 0)
+- `max_images` (INT): Maximum number to load (default: 10)
+
+**Outputs**:
+- `images` (IMAGE): Image batch
+
+**How to use**:
+1. Upload images to ComfyUI's `input` folder
+2. Set file pattern (e.g., `*.jpg` for all JPG files)
+3. Set start index and max count
+4. Load selected images
+
+**Use cases**:
+- Manually pick specific images
+- Flexible control over which images to load
+- No grouping (all images as one set)
+
+**Difference from BatchImageLoader**:
+- BatchImageLoader: Automated, folder path, auto-grouping
+- MultiImageUploader: Manual, input folder, pattern matching
+
+---
+
+### Node 3: Image Classifier 📷
 
 **Function**: Classify input images and output classification tags
 
@@ -63,22 +112,35 @@ python install.py
 
 ---
 
-### Node 2: Smart Caption Generator ✍️
+### Node 4: Smart Caption Generator ✍️
 
 **Function**: Generate captions based on classification results
 
 **Inputs**:
 - `image` (IMAGE): Input image(s)
 - `classifications` (STRING): From ImageClassifier
-- `日常plog_pe` (STRING): PE for daily plog
-- `人像自拍_pe` (STRING): PE for portrait selfie
-- `抽象文案_pe` (STRING): PE for abstract caption
-- `图片详细描述_pe` (STRING): PE for detailed description
-- `其他_pe` (STRING): PE for others
+- `日常plog_单图_pe` (STRING): PE for single daily plog image
+- `日常plog_多图_pe` (STRING): PE for multiple daily plog images
+- `人像自拍_单图_pe` (STRING): PE for single portrait image
+- `人像自拍_多图_pe` (STRING): PE for multiple portrait images
+- `抽象文案_单图_pe` (STRING): PE for single abstract caption
+- `抽象文案_多图_pe` (STRING): PE for multiple abstract captions
+- `图片详细描述_单图_pe` (STRING): PE for single detailed description
+- `图片详细描述_多图_pe` (STRING): PE for multiple detailed descriptions
+- `其他_单图_pe` (STRING): PE for single other category
+- `其他_多图_pe` (STRING): PE for multiple other category
 - `api_key` (STRING): Doubao API key
 - `api_url` (STRING): API endpoint
 - `model` (STRING): Model name
 - `text_requirement` (STRING, optional): Additional requirement
+
+**Auto PE Selection**:
+- Tag contains `_multi_pic` → Use multi-image PE
+- Tag doesn't contain `_multi_pic` → Use single-image PE
+
+**PE Differences**:
+- **Single-image PE**: Describe single moment (10-20 chars)
+- **Multi-image PE**: Summarize theme of image set (15-25 chars)
 
 **Outputs**:
 - `captions` (STRING): Generated captions JSON
@@ -86,11 +148,11 @@ python install.py
 
 ## 💡 Usage Example
 
-### Basic Workflow
+### Workflow 1: Single Image
 
 ```
-[Load Image]
-     ↓
+[Load Image] (ComfyUI built-in)
+     ↓ IMAGE
 [Image Classifier]
      ↓ classifications
      ↓ IMAGE
@@ -99,17 +161,20 @@ python install.py
 [Display Text]
 ```
 
-### Batch Processing
+### Workflow 2: Batch Processing (Recommended)
 
 ```
-[Load Images (Batch)]
+[Batch Image Loader]
+  folder_path: "D:/photos/"
      ↓ IMAGE (batch)
+     ↓ groups
 [Image Classifier]
   mode: multi
      ↓ classifications
+     ↓ IMAGE
 [Smart Caption Generator]
-     ↓ captions (JSON array)
-[Save/Display]
+     ↓ captions (JSON)
+[Display/Save Text]
 ```
 
 ## 🔧 Configuration

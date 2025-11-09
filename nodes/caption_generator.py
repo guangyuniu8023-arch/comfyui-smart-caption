@@ -71,7 +71,7 @@ def parse_classifications(classifications_json, batch_size):
 
 def select_pe(style_tag, pe_configs):
     """
-    根据分类标签选择对应的PE
+    根据分类标签自动选择对应的PE（单图或多图）
     
     Args:
         style_tag: 分类标签（如 "日常plog" 或 "日常plog_multi_pic"）
@@ -80,11 +80,17 @@ def select_pe(style_tag, pe_configs):
     Returns:
         对应的PE文本
     """
-    # 去掉_multi_pic后缀
-    base_tag = style_tag.replace("_multi_pic", "")
+    # 判断是单图还是多图
+    if "_multi_pic" in style_tag:
+        # 多图模式
+        base_tag = style_tag.replace("_multi_pic", "")
+        pe_key = f"{base_tag}_多图"
+    else:
+        # 单图模式
+        pe_key = f"{style_tag}_单图"
     
-    # 映射关系
-    return pe_configs.get(base_tag, pe_configs.get("其他", "请生成配文"))
+    # 返回对应的PE，如果找不到则使用通用PE
+    return pe_configs.get(pe_key, pe_configs.get("其他_单图", "请生成配文"))
 
 
 class SmartCaptionGenerator:
@@ -103,29 +109,54 @@ class SmartCaptionGenerator:
                 "classifications": ("STRING", {
                     "forceInput": True  # 必须从其他节点输入
                 }),
-                "日常plog_pe": ("STRING", {
+                "日常plog_单图_pe": ("STRING", {
                     "multiline": True,
-                    "default": default_pes.get("日常plog", ""),
+                    "default": default_pes.get("日常plog_单图", ""),
                     "dynamicPrompts": False
                 }),
-                "人像自拍_pe": ("STRING", {
+                "日常plog_多图_pe": ("STRING", {
                     "multiline": True,
-                    "default": default_pes.get("人像自拍", ""),
+                    "default": default_pes.get("日常plog_多图", ""),
                     "dynamicPrompts": False
                 }),
-                "抽象文案_pe": ("STRING", {
+                "人像自拍_单图_pe": ("STRING", {
                     "multiline": True,
-                    "default": default_pes.get("抽象文案", ""),
+                    "default": default_pes.get("人像自拍_单图", ""),
                     "dynamicPrompts": False
                 }),
-                "图片详细描述_pe": ("STRING", {
+                "人像自拍_多图_pe": ("STRING", {
                     "multiline": True,
-                    "default": default_pes.get("图片详细描述", ""),
+                    "default": default_pes.get("人像自拍_多图", ""),
                     "dynamicPrompts": False
                 }),
-                "其他_pe": ("STRING", {
+                "抽象文案_单图_pe": ("STRING", {
                     "multiline": True,
-                    "default": default_pes.get("其他", ""),
+                    "default": default_pes.get("抽象文案_单图", ""),
+                    "dynamicPrompts": False
+                }),
+                "抽象文案_多图_pe": ("STRING", {
+                    "multiline": True,
+                    "default": default_pes.get("抽象文案_多图", ""),
+                    "dynamicPrompts": False
+                }),
+                "图片详细描述_单图_pe": ("STRING", {
+                    "multiline": True,
+                    "default": default_pes.get("图片详细描述_单图", ""),
+                    "dynamicPrompts": False
+                }),
+                "图片详细描述_多图_pe": ("STRING", {
+                    "multiline": True,
+                    "default": default_pes.get("图片详细描述_多图", ""),
+                    "dynamicPrompts": False
+                }),
+                "其他_单图_pe": ("STRING", {
+                    "multiline": True,
+                    "default": default_pes.get("其他_单图", ""),
+                    "dynamicPrompts": False
+                }),
+                "其他_多图_pe": ("STRING", {
+                    "multiline": True,
+                    "default": default_pes.get("其他_多图", ""),
                     "dynamicPrompts": False
                 }),
                 "api_key": ("STRING", {
@@ -141,7 +172,8 @@ class SmartCaptionGenerator:
             "optional": {
                 "text_requirement": ("STRING", {
                     "default": "",
-                    "multiline": False
+                    "multiline": False,
+                    "forceInput": False  # 可以从其他节点输入，也可以留空
                 }),
             }
         }
@@ -155,11 +187,16 @@ class SmartCaptionGenerator:
         self,
         image,
         classifications,
-        日常plog_pe,
-        人像自拍_pe,
-        抽象文案_pe,
-        图片详细描述_pe,
-        其他_pe,
+        日常plog_单图_pe,
+        日常plog_多图_pe,
+        人像自拍_单图_pe,
+        人像自拍_多图_pe,
+        抽象文案_单图_pe,
+        抽象文案_多图_pe,
+        图片详细描述_单图_pe,
+        图片详细描述_多图_pe,
+        其他_单图_pe,
+        其他_多图_pe,
         api_key,
         api_url,
         model,
@@ -183,13 +220,18 @@ class SmartCaptionGenerator:
             # 解析分类结果
             style_tags = parse_classifications(classifications, batch_size)
             
-            # 准备PE配置
+            # 准备PE配置（单图和多图分开）
             pe_configs = {
-                "日常plog": 日常plog_pe,
-                "人像自拍": 人像自拍_pe,
-                "抽象文案": 抽象文案_pe,
-                "图片详细描述": 图片详细描述_pe,
-                "其他": 其他_pe
+                "日常plog_单图": 日常plog_单图_pe,
+                "日常plog_多图": 日常plog_多图_pe,
+                "人像自拍_单图": 人像自拍_单图_pe,
+                "人像自拍_多图": 人像自拍_多图_pe,
+                "抽象文案_单图": 抽象文案_单图_pe,
+                "抽象文案_多图": 抽象文案_多图_pe,
+                "图片详细描述_单图": 图片详细描述_单图_pe,
+                "图片详细描述_多图": 图片详细描述_多图_pe,
+                "其他_单图": 其他_单图_pe,
+                "其他_多图": 其他_多图_pe
             }
             
             # 为每张图片生成配文
@@ -203,10 +245,12 @@ class SmartCaptionGenerator:
                     # 选择对应的PE
                     selected_pe = select_pe(tag, pe_configs)
                     
-                    print(f"   📝 图片 {idx+1}: {tag} -> 生成配文中...")
+                    # 显示使用的PE类型
+                    pe_type = "多图" if "_multi_pic" in tag else "单图"
+                    print(f"   📝 图片 {idx+1}: {tag} ({pe_type}PE) -> 生成配文中...")
                     
                     future = executor.submit(
-                        doubao_client.call_doubao_api,
+                        doubao_client.call_doubao_api_for_caption,
                         img,
                         selected_pe,
                         text_requirement,
@@ -221,9 +265,8 @@ class SmartCaptionGenerator:
                 for future in as_completed(future_to_idx):
                     idx = future_to_idx[future]
                     try:
-                        result = future.result()
-                        # 提取配文内容（可能在不同字段）
-                        caption = result.get('caption', result.get('text', result.get('content', '生成失败')))
+                        # call_doubao_api_for_caption 直接返回配文字符串
+                        caption = future.result()
                         idx_to_caption[idx] = caption
                         print(f"   ✅ 图片 {idx+1}: {caption}")
                     except Exception as e:

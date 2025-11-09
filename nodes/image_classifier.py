@@ -73,6 +73,10 @@ class ImageClassifier:
                 "mode": (["auto", "single", "multi"], {
                     "default": "auto"
                 }),
+                "groups": ("STRING", {
+                    "default": "",
+                    "forceInput": False  # 可选，从BatchImageLoader输入
+                }),
             }
         }
     
@@ -81,7 +85,7 @@ class ImageClassifier:
     FUNCTION = "classify"
     CATEGORY = "SmartCaption"
     
-    def classify(self, image, classification_pe, api_key, api_url, model, text_requirement="", mode="auto"):
+    def classify(self, image, classification_pe, api_key, api_url, model, text_requirement="", mode="auto", groups=""):
         """
         分类主函数
         
@@ -95,6 +99,15 @@ class ImageClassifier:
             # 转换tensor为PIL Images
             pil_images = tensor_to_pil_batch(image)
             
+            # 解析分组信息
+            groups_info = None
+            if groups:
+                try:
+                    groups_info = json.loads(groups)
+                except:
+                    print(f"⚠️  分组信息解析失败，将作为整体处理")
+                    groups_info = None
+            
             # 自动判断模式
             if mode == "auto":
                 if batch_size == 1:
@@ -105,6 +118,8 @@ class ImageClassifier:
             print(f"\n{'='*60}")
             print(f"📷 ImageClassifier - 开始分类")
             print(f"   模式: {mode} | 图片数: {batch_size}")
+            if groups_info:
+                print(f"   分组数: {len(groups_info.get('groups', []))}")
             print(f"{'='*60}")
             
             # 单图模式
@@ -123,21 +138,77 @@ class ImageClassifier:
                 
             # 多图模式
             else:
-                result = classifier.classify_multi_images(
-                    images=pil_images,
-                    classification_pe=classification_pe,
-                    text_requirement=text_requirement,
-                    api_key=api_key,
-                    api_url=api_url,
-                    model=model
-                )
-                
-                classifications_json = json.dumps(result, ensure_ascii=False)
-                
-                if 'style_tag' in result:
-                    print(f"✅ 多图有关联: {result['style_tag']}")
+                # 如果有分组信息，按组分别处理
+                if groups_info and len(groups_info.get('groups', [])) > 1:
+                    print(f"   🗂️  检测到多组图片，将分别判断关联")
+                    all_results = []
+                    
+                    for group in groups_info['groups']:
+                        group_name = group['name']
+                        start_idx = group['start']
+                        end_idx = group['end']
+                        
+                        print(f"\n   📁 处理分组: {group_name} ({group['count']}张)")
+                        
+                        # 提取当前组的图片
+                        group_images = pil_images[start_idx:end_idx]
+                        
+                        # 对当前组进行分类
+                        if len(group_images) == 1:
+                            # 单图
+                            group_result = classifier.classify_single_image(
+                                image=group_images[0],
+                                classification_pe=classification_pe,
+                                text_requirement=text_requirement,
+                                api_key=api_key,
+                                api_url=api_url,
+                                model=model
+                            )
+                            all_results.append(group_result)
+                        else:
+                            # 多图
+                            group_result = classifier.classify_multi_images(
+                                images=group_images,
+                                classification_pe=classification_pe,
+                                text_requirement=text_requirement,
+                                api_key=api_key,
+                                api_url=api_url,
+                                model=model
+                            )
+                            all_results.append(group_result)
+                    
+                    # 合并所有组的结果
+                    # 展开为每张图的标签列表
+                    all_tags = []
+                    for result in all_results:
+                        if 'style_tag' in result:
+                            # 单标签或有关联
+                            all_tags.append(result['style_tag'])
+                        elif 'style_tags' in result:
+                            # 多标签
+                            all_tags.extend(result['style_tags'])
+                    
+                    result = {"style_tags": all_tags}
+                    classifications_json = json.dumps(result, ensure_ascii=False)
+                    print(f"✅ 所有分组处理完成，共 {len(all_tags)} 个标签")
+                    
                 else:
-                    print(f"⚠️  多图无关联: {result.get('style_tags', [])}")
+                    # 无分组或只有一组，作为整体处理
+                    result = classifier.classify_multi_images(
+                        images=pil_images,
+                        classification_pe=classification_pe,
+                        text_requirement=text_requirement,
+                        api_key=api_key,
+                        api_url=api_url,
+                        model=model
+                    )
+                    
+                    classifications_json = json.dumps(result, ensure_ascii=False)
+                    
+                    if 'style_tag' in result:
+                        print(f"✅ 多图有关联: {result['style_tag']}")
+                    else:
+                        print(f"⚠️  多图无关联: {result.get('style_tags', [])}")
             
             print(f"{'='*60}\n")
             

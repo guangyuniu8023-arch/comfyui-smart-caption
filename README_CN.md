@@ -59,7 +59,72 @@ python install.py
 
 ## 🎨 节点说明
 
-### 节点1：图片分类器 📷 (ImageClassifier)
+### 节点1：批量图片加载器 📁 (BatchImageLoader)
+
+**功能**：从文件夹批量加载多张图片，支持自动分组
+
+**输入参数**：
+- `folder_path` (STRING)：文件夹路径
+- `max_images` (INT, 可选)：最大加载图片数（默认100）
+
+**输出**：
+- `images` (IMAGE)：图片batch
+- `groups` (STRING)：分组信息JSON（自动检测）
+
+**自动分组规则**：
+- **有子文件夹**：每个子文件夹作为一组
+  ```
+  parent/
+  ├── group1/  → 第1组
+  └── group2/  → 第2组
+  ```
+- **无子文件夹**：所有图片作为一组
+
+**分组信息格式**：
+```json
+{
+  "total_images": 5,
+  "groups": [
+    {"name": "group1", "start": 0, "end": 3, "count": 3},
+    {"name": "group2", "start": 3, "end": 5, "count": 2}
+  ]
+}
+```
+
+**提示**：单图可以使用ComfyUI自带的Load Image节点
+
+---
+
+### 节点2：多图上传器 🖼️ (MultiImageUploader)
+
+**功能**：从ComfyUI的input文件夹手动选择多张图片上传
+
+**输入参数**：
+- `image_pattern` (STRING)：文件匹配模式（如 `*.jpg` 或 `photo_*.png`）
+- `start_index` (INT)：起始索引（默认0）
+- `max_images` (INT)：最大加载数量（默认10）
+
+**输出**：
+- `images` (IMAGE)：图片batch
+
+**使用方法**：
+1. 先把图片上传到ComfyUI的 `input` 文件夹
+2. 在节点中设置匹配模式（如 `*.jpg` 匹配所有jpg图片）
+3. 设置起始索引和数量
+4. 加载选中的图片
+
+**使用场景**：
+- 手动挑选几张图片进行处理
+- 灵活控制加载哪些图片
+- 不需要分组功能（所有图片作为一组）
+
+**与BatchImageLoader的区别**：
+- BatchImageLoader：自动化，文件夹路径，自动分组
+- MultiImageUploader：手动化，input文件夹，文件模式匹配
+
+---
+
+### 节点3：图片分类器 📷 (ImageClassifier)
 
 **功能**：对输入的图片进行分类，输出分类标签
 
@@ -71,6 +136,11 @@ python install.py
 - `model` (STRING)：模型名称
 - `text_requirement` (STRING, 可选)：文本需求
 - `mode` (COMBO)：single/multi/auto（自动判断）
+- `groups` (STRING, 可选)：分组信息（从BatchImageLoader传入）
+
+**分组处理**：
+- **有groups且多组**：分别对每组进行关联判断
+- **无groups或单组**：所有图片作为一个整体判断
 
 **输出**：
 - `classifications` (STRING)：分类结果JSON
@@ -88,22 +158,35 @@ python install.py
 
 ---
 
-### 节点2：智能配文生成器 ✍️ (SmartCaptionGenerator)
+### 节点4：智能配文生成器 ✍️ (SmartCaptionGenerator)
 
 **功能**：根据分类结果，使用对应的PE生成配文
 
 **输入参数**：
 - `image` (IMAGE)：输入图片
 - `classifications` (STRING)：分类结果（从ImageClassifier）
-- `日常plog_pe` (STRING)：日常plog配文PE
-- `人像自拍_pe` (STRING)：人像自拍配文PE
-- `抽象文案_pe` (STRING)：抽象文案配文PE
-- `图片详细描述_pe` (STRING)：图片详细描述配文PE
-- `其他_pe` (STRING)：其他类型配文PE
+- `日常plog_单图_pe` (STRING)：日常plog单图配文PE
+- `日常plog_多图_pe` (STRING)：日常plog多图配文PE
+- `人像自拍_单图_pe` (STRING)：人像自拍单图配文PE
+- `人像自拍_多图_pe` (STRING)：人像自拍多图配文PE
+- `抽象文案_单图_pe` (STRING)：抽象文案单图配文PE
+- `抽象文案_多图_pe` (STRING)：抽象文案多图配文PE
+- `图片详细描述_单图_pe` (STRING)：图片详细描述单图配文PE
+- `图片详细描述_多图_pe` (STRING)：图片详细描述多图配文PE
+- `其他_单图_pe` (STRING)：其他单图配文PE
+- `其他_多图_pe` (STRING)：其他多图配文PE
 - `api_key` (STRING)：Doubao API密钥
 - `api_url` (STRING)：API地址
 - `model` (STRING)：模型名称
 - `text_requirement` (STRING, 可选)：额外的文本需求
+
+**自动PE选择**：
+- 标签包含 `_multi_pic` → 自动使用多图PE
+- 标签不包含 `_multi_pic` → 自动使用单图PE
+
+**单图/多图PE的区别**：
+- **单图PE**：描述单个画面，10-20字
+- **多图PE**：概括整组主题，15-25字
 
 **输出**：
 - `captions` (STRING)：配文结果JSON
@@ -118,10 +201,10 @@ python install.py
 
 ## 💡 使用示例
 
-### 基础工作流：单图分类+配文
+### 工作流1：单图分类+配文
 
 ```
-[Load Image]
+[Load Image]（ComfyUI自带）
      ↓ IMAGE
 [ImageClassifier]
   配置：
@@ -138,19 +221,81 @@ python install.py
 [Display Text] / [Save Text]
 ```
 
-### 批量处理工作流
+### 工作流2：批量图片处理 - 自动分组（推荐✨）
 
 ```
-[Load Images (Batch)]
-     ↓ IMAGE (batch)
+[BatchImageLoader]
+  输入：folder_path: "D:/photos/"
+  文件夹结构：
+    photos/
+    ├── trip1/   (3张旅行照)
+    └── trip2/   (2张旅行照)
+     ↓ IMAGE (batch: 5张)
+     ↓ groups (JSON: 2个分组)
+[ImageClassifier]
+  输入：groups连接到BatchImageLoader的groups输出
+  mode: multi
+  处理：
+    - group1(3张) → 判断关联 → "日常plog_multi_pic"
+    - group2(2张) → 判断关联 → "日常plog_multi_pic"
+     ↓ classifications: {"style_tags": ["日常plog_multi_pic", "日常plog_multi_pic", "日常plog_multi_pic", "日常plog_multi_pic", "日常plog_multi_pic"]}
+     ↓ IMAGE
+[SmartCaptionGenerator]
+     ↓ captions: {"captions": ["配文1", "配文2", ...]}
+[Display Text] / [Save Text]
+```
+
+**关键点**：
+- 将BatchImageLoader的 `groups` 输出连接到ImageClassifier的 `groups` 输入
+- ImageClassifier会自动识别分组，分别判断每组的关联性
+- SmartCaptionGenerator自动使用多图PE生成配文（因为标签是 `_multi_pic`）
+
+**PE自动选择示例**：
+```
+分类结果: {"style_tags": ["日常plog_multi_pic", "人像自拍"]}
+
+配文生成:
+- 图1: "日常plog_multi_pic" → 使用"日常plog_多图_pe" → "周末旅行vlog｜记录美好时光"
+- 图2: "人像自拍" → 使用"人像自拍_单图_pe" → "今日穿搭分享～✨"
+```
+
+### 工作流3：手动选择多图处理
+
+```
+[MultiImageUploader]
+  输入：
+  - image_pattern: "vacation_*.jpg"
+  - start_index: 0
+  - max_images: 5
+  （从input文件夹加载vacation_0.jpg到vacation_4.jpg）
+     ↓ IMAGE (batch: 5张，作为一组)
 [ImageClassifier]
   mode: multi
+  （5张图作为一个整体判断关联）
      ↓ classifications
      ↓ IMAGE
 [SmartCaptionGenerator]
-     ↓ captions (JSON)
-[Parse JSON] → 提取每张图的配文
-[Save to File]
+     ↓ captions
+[Display/Save]
+```
+
+**适用场景**：
+- 手动挑选几张特定图片
+- 不需要自动分组
+- 快速测试和调试
+
+---
+
+### 工作流4：完整自动化流程（推荐）
+
+```
+[BatchImageLoader] → 自动加载+分组
+     ↓
+[ImageClassifier] → 按组分别分类
+     ↓
+[SmartCaptionGenerator] → 自动选择PE生成配文
+     ↓
+[Save Text] → 保存配文结果
 ```
 
 ### 高级工作流：条件处理
